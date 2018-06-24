@@ -9,12 +9,13 @@ using normalize = remove_cv_t<remove_reference_t<T>>;
 template<typename E>
 struct any_ex {
     size_t dummy;
-    template<typename D, typename = enable_if_t<!is_same_v<normalize<D>, E>>> // C++ 17 is_same_v
+    template<typename D,
+        typename = enable_if_t<!is_same_v<normalize<D>, E>>> // C++ 17 is_same_v
     operator D () const;
 };
 
 template<typename T, size_t... n,
-    typename = void_t<decltype(T {any_ex<T>{n}...})>> // C++ 17 void_t
+    typename = decltype(T {any_ex<T>{n}...})>
 constexpr bool has_n_fields(index_sequence<n...>) { return true; }
 
 template<typename T, typename U>
@@ -114,11 +115,13 @@ struct tuple_hash {
 
 int main()
 {
+    {
     struct S {
         string_view foo; // C++ 17 string_view
         string bar;
         size_t baz;
     };
+
     unordered_map<S, string, struct_hash, struct_compare> m;
     m[{.foo = "foo", .bar = "bar", .baz = 10}] = "value1";
     m[{.foo = "bar", .bar = "foo", .baz = 10}] = "value2";
@@ -127,17 +130,20 @@ int main()
     auto it = m.find({.foo = "foo", .bar = "bar", .baz = 10});
     if (it != m.end())
         cout << "founded " << it->second << endl;
+    }
 
+    {
     // Old style tuples
-    unordered_map<tuple<string, string, size_t>, string, tuple_hash> mt;
-    mt[{"foo", "bar", 10}] = "value1";
-    mt[{"bar", "foo", 10}] = "value2";
-    for (auto &kv : mt)
+    unordered_map<tuple<string, string, size_t>, string, tuple_hash> m;
+    m[{"foo", "bar", 10}] = "value1";
+    m[{"bar", "foo", 10}] = "value2";
+    for (auto &kv : m)
         cout << get<0>(kv.first) << " " << get<1>(kv.first) << " "
             << get<2>(kv.first) << ": " << kv.second << endl;
-    auto itt = mt.find({"foo", "bar", 10});
-    if (itt != mt.end())
-        cout << "founded " << itt->second << endl;
+    auto it = m.find({"foo", "bar", 10});
+    if (it != m.end())
+        cout << "founded " << it->second << endl;
+    }
 
     return 0;
 }
